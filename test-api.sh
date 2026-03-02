@@ -1,14 +1,14 @@
 #!/bin/bash
 set -e
 
-echo "Building Heimdall..."
-go build -o /tmp/heimdall ./cmd/heimdall
+echo "Building Lattice..."
+go build -o /tmp/lattice ./cmd/lattice
 
-echo "Starting Heimdall..."
-/tmp/heimdall server -c examples/heimdall.hcl &
-HEIMDALL_PID=$!
+echo "Starting Lattice..."
+/tmp/lattice server -c examples/lattice.hcl &
+LATTICE_PID=$!
 
-# Give Heimdall time to start
+# Give Lattice time to start
 sleep 2
 
 echo "Testing GetTopology API..."
@@ -27,7 +27,7 @@ else
 fi
 
 echo "Cleaning up..."
-kill $HEIMDALL_PID 2>/dev/null || true
+kill $LATTICE_PID 2>/dev/null || true
 
 # Give process time to clean up
 sleep 1

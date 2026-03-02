@@ -3,7 +3,7 @@ package main
 import (
 	"os"
 
-	"github.com/norncorp/heimdall/internal/cli"
+	"github.com/jumppad-labs/lattice/internal/cli"
 )
 
 func main() {

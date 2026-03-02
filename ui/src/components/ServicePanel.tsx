@@ -12,6 +12,7 @@ import { Divider } from '../catalyst/divider';
 import { Table, TableHead, TableBody, TableRow, TableHeader, TableCell } from '../catalyst/table';
 import { useServiceResources } from '../hooks/useServiceResources';
 import { useResourceData } from '../hooks/useResourceData';
+import { useRequestLogs } from '../hooks/useRequestLogs';
 
 interface ServicePanelProps {
   service: Service | null;
@@ -47,6 +48,188 @@ function getStatusLabel(status: number): string {
     default:
       return 'Unspecified';
   }
+}
+
+/**
+ * RequestLogsView - Shows recent HTTP request logs
+ */
+function RequestLogsView({ serviceName }: { serviceName: string }) {
+  const [logLevel, setLogLevel] = useState<'debug' | 'info' | 'warn' | 'error'>('info');
+  const [autoRefresh, setAutoRefresh] = useState(true);
+
+  const { data, isLoading, error } = useRequestLogs({
+    serviceName,
+    enabled: autoRefresh, // Only poll when auto-refresh is on
+    refetchInterval: autoRefresh ? 2000 : false, // Poll every 2s when enabled
+    limit: 50, // Show last 50 requests
+  });
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="flex items-center gap-3">
+          <svg
+            className="h-5 w-5 animate-spin text-norn-green"
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+          >
+            <circle
+              className="opacity-25"
+              cx="12"
+              cy="12"
+              r="10"
+              stroke="currentColor"
+              strokeWidth="4"
+            ></circle>
+            <path
+              className="opacity-75"
+              fill="currentColor"
+              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+            ></path>
+          </svg>
+          <Text>Loading request logs...</Text>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="rounded-lg border border-red-500/20 bg-red-500/10 px-6 py-12 text-center">
+        <Text className="text-red-400">Failed to load logs: {error.message}</Text>
+      </div>
+    );
+  }
+
+  if (!data || data.logs.length === 0) {
+    return (
+      <div className="rounded-lg border border-dashed border-gray-700 px-6 py-12 text-center">
+        <svg
+          className="mx-auto h-12 w-12 text-gray-600"
+          fill="none"
+          viewBox="0 0 24 24"
+          strokeWidth={1.5}
+          stroke="currentColor"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25zM6.75 12h.008v.008H6.75V12zm0 3h.008v.008H6.75V15zm0 3h.008v.008H6.75V18z"
+          />
+        </svg>
+        <Text className="mt-4">No requests logged yet</Text>
+        <Text className="mt-1 text-xs">
+          Request logs will appear here when the service receives HTTP requests
+        </Text>
+      </div>
+    );
+  }
+
+  // Format timestamp
+  const formatTimestamp = (timestamp: bigint) => {
+    const date = new Date(Number(timestamp));
+    return date.toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false,
+    });
+  };
+
+  // Get status badge color based on HTTP status code
+  const getStatusColor = (status: number): 'green' | 'yellow' | 'red' | 'zinc' => {
+    if (status >= 200 && status < 300) return 'green';
+    if (status >= 300 && status < 400) return 'yellow';
+    if (status >= 400 && status < 500) return 'yellow';
+    if (status >= 500) return 'red';
+    return 'zinc';
+  };
+
+  // Filter logs based on selected level (hierarchical)
+  // Log level hierarchy: debug < info < warn < error
+  const logLevelPriority: Record<string, number> = {
+    debug: 0,
+    info: 1,
+    warn: 2,
+    error: 3,
+  };
+
+  const filteredLogs = data.logs.filter((log) => {
+    const logPriority = logLevelPriority[log.level] ?? 0;
+    const selectedPriority = logLevelPriority[logLevel] ?? 0;
+    // Show logs at the selected level and above
+    return logPriority >= selectedPriority;
+  });
+
+  return (
+    <div>
+      <div className="flex items-center justify-between">
+        <Subheading>Recent Requests</Subheading>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setAutoRefresh(!autoRefresh)}
+            className="flex items-center gap-2 rounded-lg border border-gray-700 bg-norn-dark px-3 py-1.5 text-sm text-white transition-colors hover:border-norn-green focus:outline-none focus:ring-1 focus:ring-norn-green"
+            title={autoRefresh ? 'Pause auto-refresh' : 'Resume auto-refresh'}
+          >
+            {autoRefresh ? (
+              <>
+                <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zM7 8a1 1 0 012 0v4a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v4a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
+                </svg>
+                <span>Pause</span>
+              </>
+            ) : (
+              <>
+                <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
+                </svg>
+                <span>Play</span>
+              </>
+            )}
+          </button>
+          <span className="text-sm text-gray-400">Level:</span>
+          <select
+            value={logLevel}
+            onChange={(e) => setLogLevel(e.target.value as 'debug' | 'info' | 'warn' | 'error')}
+            className="rounded-lg border border-gray-700 bg-norn-dark px-3 py-1.5 text-sm text-white focus:border-norn-green focus:outline-none focus:ring-1 focus:ring-norn-green"
+          >
+            <option value="debug">Debug</option>
+            <option value="info">Info</option>
+            <option value="warn">Warn</option>
+            <option value="error">Error</option>
+          </select>
+        </div>
+      </div>
+      <Divider className="my-4" />
+      <Table dense striped>
+        <TableHead>
+          <TableRow>
+            <TableHeader>Time</TableHeader>
+            <TableHeader>Method</TableHeader>
+            <TableHeader>Path</TableHeader>
+            <TableHeader>Status</TableHeader>
+            <TableHeader>Duration</TableHeader>
+          </TableRow>
+        </TableHead>
+        <TableBody>
+          {filteredLogs.slice().reverse().map((log) => (
+            <TableRow key={log.sequence.toString()}>
+              <TableCell className="font-mono text-xs">{formatTimestamp(log.timestamp)}</TableCell>
+              <TableCell>
+                <Badge color="zinc">{log.method}</Badge>
+              </TableCell>
+              <TableCell className="font-mono text-xs">{log.path}</TableCell>
+              <TableCell>
+                <Badge color={getStatusColor(log.status)}>{log.status}</Badge>
+              </TableCell>
+              <TableCell className="text-xs">{log.durationMs}ms</TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </div>
+  );
 }
 
 /**
@@ -162,6 +345,7 @@ export function ServicePanel({ service, open, onClose }: ServicePanelProps) {
   const { data: resources, isLoading, error } = useServiceResources(service);
   // Track view mode for each resource: 'schema' or 'data'
   const [resourceViews, setResourceViews] = useState<Record<string, 'schema' | 'data'>>({});
+  const [selectedTab, setSelectedTab] = useState(0); // Track active tab (0=Overview, 1=Resources, 2=Logs, 3=Metadata)
 
   if (!service) return null;
 
@@ -202,10 +386,10 @@ export function ServicePanel({ service, open, onClose }: ServicePanelProps) {
 
                 {/* Tabbed Content */}
                 <div className="flex-1 overflow-y-auto">
-                  <TabGroup>
+                  <TabGroup selectedIndex={selectedTab} onChange={setSelectedTab}>
                     <div className="border-b border-gray-800 px-6">
                       <TabList className="-mb-px flex gap-6">
-                        {['Overview', 'Resources', 'Metadata'].map((tab) => (
+                        {['Overview', 'Resources', 'Logs', 'Metadata'].map((tab) => (
                           <Tab
                             key={tab}
                             className={({ selected }) =>
@@ -441,6 +625,11 @@ export function ServicePanel({ service, open, onClose }: ServicePanelProps) {
                             </div>
                           )}
                         </div>
+                      </TabPanel>
+
+                      {/* Logs Tab */}
+                      <TabPanel className="focus:outline-none">
+                        {selectedTab === 2 && <RequestLogsView serviceName={service.name} />}
                       </TabPanel>
 
                       {/* Metadata Tab */}

@@ -1,24 +1,24 @@
-# Heimdall
+# Lattice
 
-The all-seeing observer for Loki service meshes. Heimdall provides real-time topology visualization and monitoring through a gossip-based discovery mesh and a web UI.
+The observer for Polymorph service meshes. Lattice provides real-time topology visualization and monitoring through a gossip-based discovery mesh and a web UI.
 
-Services running in [Loki](../loki/) automatically register with Heimdall via Serf, and Heimdall renders the live service graph -- showing services, their dependencies, resource schemas, and request logs.
+Services running in [Polymorph](../loki/) automatically register with Lattice via Serf, and Lattice renders the live service graph -- showing services, their dependencies, resource schemas, and request logs.
 
 ## Quick Start
 
 ```bash
-# Start Heimdall
-heimdall server -c examples/heimdall.hcl
+# Start Lattice
+lattice server -c examples/lattice.hcl
 
-# In another terminal, start Loki services that join the mesh
-loki server -c examples/multi-service-mesh.hcl
+# In another terminal, start Polymorph services that join the mesh
+polymorph server -c examples/multi-service-mesh.hcl
 ```
 
 Open `http://localhost:9000` to see the topology UI.
 
 ## Configuration
 
-Heimdall uses HCL configuration:
+Lattice uses HCL configuration:
 
 ```hcl
 server {
@@ -27,11 +27,11 @@ server {
 }
 ```
 
-Loki services join the mesh by referencing Heimdall's gossip address:
+Polymorph services join the mesh by referencing Lattice's gossip address:
 
 ```hcl
-# In a Loki config
-heimdall {
+# In a Polymorph config
+lattice {
   address = "localhost:7946"
 }
 ```
@@ -47,7 +47,7 @@ heimdall {
                     Connect-RPC (streaming)
                           |
                     +-----+-----+
-                    | Heimdall  |  Go server
+                    | Lattice   |  Go server
                     |  API      |  ObserverService
                     +-----+-----+
                           |
@@ -59,18 +59,18 @@ heimdall {
          | user-   | | order | | api-     |
          | service | | -svc  | | gateway  |
          +---------+ +-------+ +----------+
-                    Loki services
+                 Polymorph services
 ```
 
-**Serf Mesh**: Services join the gossip mesh on startup and advertise metadata (name, type, address, upstreams) via Serf tags. Heimdall watches for member join/leave events and rebuilds the topology.
+**Serf Mesh**: Services join the gossip mesh on startup and advertise metadata (name, type, address, upstreams) via Serf tags. Lattice watches for member join/leave events and rebuilds the topology.
 
-**Connect-RPC API**: The UI connects over Connect-RPC with streaming support for real-time topology updates. Resource metadata and request logs are fetched on demand by routing requests through the mesh to target Loki services.
+**Connect-RPC API**: The UI connects over Connect-RPC with streaming support for real-time topology updates. Resource metadata and request logs are fetched on demand by routing requests through the mesh to target Polymorph services.
 
 **Web UI**: React app with an interactive node graph (React Flow + ELK layout). Services are grouped by host, color-coded by status, and clickable to inspect resources and live request logs.
 
 ## API
 
-Heimdall exposes a Connect-RPC API at `/observer.v1.ObserverService/`.
+Lattice exposes a Connect-RPC API at `/observer.v1.ObserverService/`.
 
 ### GetTopology
 
@@ -88,7 +88,7 @@ Server-streaming RPC that pushes topology updates in real-time. The first messag
 
 ### GetServiceResources
 
-Fetches resource metadata (schemas, row counts, field definitions) from a Loki service by routing through the mesh.
+Fetches resource metadata (schemas, row counts, field definitions) from a Polymorph service by routing through the mesh.
 
 ```bash
 curl -X POST http://localhost:9000/observer.v1.ObserverService/GetServiceResources \
@@ -98,7 +98,7 @@ curl -X POST http://localhost:9000/observer.v1.ObserverService/GetServiceResourc
 
 ### GetRequestLogs
 
-Fetches recent HTTP request logs from a Loki service. Supports pagination via `afterSequence` and `limit`.
+Fetches recent HTTP request logs from a Polymorph service. Supports pagination via `afterSequence` and `limit`.
 
 ```bash
 curl -X POST http://localhost:9000/observer.v1.ObserverService/GetRequestLogs \
@@ -132,8 +132,8 @@ npm run generate     # Regenerate Connect-RPC client from protos
 ## Project Structure
 
 ```
-heimdall/
-├── cmd/heimdall/              Entry point
+lattice/
+├── cmd/lattice/               Entry point
 ├── internal/
 │   ├── api/                   ObserverService implementation
 │   ├── cli/                   CLI commands (server)

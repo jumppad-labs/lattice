@@ -1,6 +1,6 @@
 package config
 
-// Config represents the root Heimdall configuration
+// Config represents the root Lattice configuration
 type Config struct {
 	Server *ServerConfig `hcl:"server,block"`
 }

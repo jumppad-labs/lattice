@@ -8,7 +8,7 @@ import (
 	connect "connectrpc.com/connect"
 	context "context"
 	errors "errors"
-	v1 "github.com/norncorp/heimdall/pkg/api/observer/v1"
+	v1 "github.com/jumppad-labs/lattice/pkg/api/observer/v1"
 	http "net/http"
 	strings "strings"
 )
@@ -42,6 +42,9 @@ const (
 	// ObserverServiceGetServiceResourcesProcedure is the fully-qualified name of the ObserverService's
 	// GetServiceResources RPC.
 	ObserverServiceGetServiceResourcesProcedure = "/observer.v1.ObserverService/GetServiceResources"
+	// ObserverServiceGetRequestLogsProcedure is the fully-qualified name of the ObserverService's
+	// GetRequestLogs RPC.
+	ObserverServiceGetRequestLogsProcedure = "/observer.v1.ObserverService/GetRequestLogs"
 )
 
 // These variables are the protoreflect.Descriptor objects for the RPCs defined in this package.
@@ -50,6 +53,7 @@ var (
 	observerServiceGetTopologyMethodDescriptor         = observerServiceServiceDescriptor.Methods().ByName("GetTopology")
 	observerServiceWatchTopologyMethodDescriptor       = observerServiceServiceDescriptor.Methods().ByName("WatchTopology")
 	observerServiceGetServiceResourcesMethodDescriptor = observerServiceServiceDescriptor.Methods().ByName("GetServiceResources")
+	observerServiceGetRequestLogsMethodDescriptor      = observerServiceServiceDescriptor.Methods().ByName("GetRequestLogs")
 )
 
 // ObserverServiceClient is a client for the observer.v1.ObserverService service.
@@ -60,6 +64,8 @@ type ObserverServiceClient interface {
 	WatchTopology(context.Context, *connect.Request[v1.WatchTopologyRequest]) (*connect.ServerStreamForClient[v1.TopologyUpdate], error)
 	// GetServiceResources fetches resource metadata from a Loki service via RPC
 	GetServiceResources(context.Context, *connect.Request[v1.GetServiceResourcesRequest]) (*connect.Response[v1.GetServiceResourcesResponse], error)
+	// GetRequestLogs fetches recent HTTP request logs for a service
+	GetRequestLogs(context.Context, *connect.Request[v1.GetRequestLogsRequest]) (*connect.Response[v1.GetRequestLogsResponse], error)
 }
 
 // NewObserverServiceClient constructs a client for the observer.v1.ObserverService service. By
@@ -90,6 +96,12 @@ func NewObserverServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			connect.WithSchema(observerServiceGetServiceResourcesMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
+		getRequestLogs: connect.NewClient[v1.GetRequestLogsRequest, v1.GetRequestLogsResponse](
+			httpClient,
+			baseURL+ObserverServiceGetRequestLogsProcedure,
+			connect.WithSchema(observerServiceGetRequestLogsMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -98,6 +110,7 @@ type observerServiceClient struct {
 	getTopology         *connect.Client[v1.GetTopologyRequest, v1.GetTopologyResponse]
 	watchTopology       *connect.Client[v1.WatchTopologyRequest, v1.TopologyUpdate]
 	getServiceResources *connect.Client[v1.GetServiceResourcesRequest, v1.GetServiceResourcesResponse]
+	getRequestLogs      *connect.Client[v1.GetRequestLogsRequest, v1.GetRequestLogsResponse]
 }
 
 // GetTopology calls observer.v1.ObserverService.GetTopology.
@@ -115,6 +128,11 @@ func (c *observerServiceClient) GetServiceResources(ctx context.Context, req *co
 	return c.getServiceResources.CallUnary(ctx, req)
 }
 
+// GetRequestLogs calls observer.v1.ObserverService.GetRequestLogs.
+func (c *observerServiceClient) GetRequestLogs(ctx context.Context, req *connect.Request[v1.GetRequestLogsRequest]) (*connect.Response[v1.GetRequestLogsResponse], error) {
+	return c.getRequestLogs.CallUnary(ctx, req)
+}
+
 // ObserverServiceHandler is an implementation of the observer.v1.ObserverService service.
 type ObserverServiceHandler interface {
 	// GetTopology returns the current topology snapshot
@@ -123,6 +141,8 @@ type ObserverServiceHandler interface {
 	WatchTopology(context.Context, *connect.Request[v1.WatchTopologyRequest], *connect.ServerStream[v1.TopologyUpdate]) error
 	// GetServiceResources fetches resource metadata from a Loki service via RPC
 	GetServiceResources(context.Context, *connect.Request[v1.GetServiceResourcesRequest]) (*connect.Response[v1.GetServiceResourcesResponse], error)
+	// GetRequestLogs fetches recent HTTP request logs for a service
+	GetRequestLogs(context.Context, *connect.Request[v1.GetRequestLogsRequest]) (*connect.Response[v1.GetRequestLogsResponse], error)
 }
 
 // NewObserverServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -149,6 +169,12 @@ func NewObserverServiceHandler(svc ObserverServiceHandler, opts ...connect.Handl
 		connect.WithSchema(observerServiceGetServiceResourcesMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
+	observerServiceGetRequestLogsHandler := connect.NewUnaryHandler(
+		ObserverServiceGetRequestLogsProcedure,
+		svc.GetRequestLogs,
+		connect.WithSchema(observerServiceGetRequestLogsMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/observer.v1.ObserverService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case ObserverServiceGetTopologyProcedure:
@@ -157,6 +183,8 @@ func NewObserverServiceHandler(svc ObserverServiceHandler, opts ...connect.Handl
 			observerServiceWatchTopologyHandler.ServeHTTP(w, r)
 		case ObserverServiceGetServiceResourcesProcedure:
 			observerServiceGetServiceResourcesHandler.ServeHTTP(w, r)
+		case ObserverServiceGetRequestLogsProcedure:
+			observerServiceGetRequestLogsHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -176,4 +204,8 @@ func (UnimplementedObserverServiceHandler) WatchTopology(context.Context, *conne
 
 func (UnimplementedObserverServiceHandler) GetServiceResources(context.Context, *connect.Request[v1.GetServiceResourcesRequest]) (*connect.Response[v1.GetServiceResourcesResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("observer.v1.ObserverService.GetServiceResources is not implemented"))
+}
+
+func (UnimplementedObserverServiceHandler) GetRequestLogs(context.Context, *connect.Request[v1.GetRequestLogsRequest]) (*connect.Response[v1.GetRequestLogsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("observer.v1.ObserverService.GetRequestLogs is not implemented"))
 }

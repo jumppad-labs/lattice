@@ -4,16 +4,16 @@
 
 Currently, `Resource` and `Field` proto messages are duplicated in both:
 - `loki/api/meta/v1/meta.proto` (source of truth)
-- `heimdall/api/observer/v1/observer.proto` (copy)
+- `lattice/api/observer/v1/observer.proto` (copy)
 
-**Future improvement:** Configure Heimdall to import from Loki's protos directly.
+**Future improvement:** Configure Lattice to import from Polymorph's protos directly.
 
 ### Option 1: Buf Schema Registry (BSR)
-1. Push Loki protos to BSR: `buf push`
-2. Add to `heimdall/buf.yaml`:
+1. Push Polymorph protos to BSR: `buf push`
+2. Add to `lattice/buf.yaml`:
    ```yaml
    deps:
-     - buf.build/norncorp/loki
+     - buf.build/jumppad-labs/polymorph
    ```
 3. Import in `observer.proto`:
    ```protobuf
@@ -27,7 +27,7 @@ Use buf workspace for local development:
 version: v2
 directories:
   - loki
-  - heimdall
+  - lattice
 ```
 
 For now, keep protos in sync manually. Changes to Resource/Field must be applied to both files.

@@ -6,14 +6,14 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
-	observerv1 "github.com/norncorp/heimdall/pkg/api/observer/v1"
-	heimdallserf "github.com/norncorp/heimdall/internal/serf"
+	observerv1 "github.com/jumppad-labs/lattice/pkg/api/observer/v1"
+	latticeserf "github.com/jumppad-labs/lattice/internal/serf"
 	"github.com/stretchr/testify/require"
 )
 
 func TestNewObserverService(t *testing.T) {
-	mesh, err := heimdallserf.NewMesh(heimdallserf.MeshConfig{
-		NodeName: "test-heimdall",
+	mesh, err := latticeserf.NewMesh(latticeserf.MeshConfig{
+		NodeName: "test-lattice",
 		BindPort: 0, // Random port
 	})
 	require.NoError(t, err)
@@ -25,8 +25,8 @@ func TestNewObserverService(t *testing.T) {
 }
 
 func TestObserverService_GetTopology(t *testing.T) {
-	mesh, err := heimdallserf.NewMesh(heimdallserf.MeshConfig{
-		NodeName: "test-heimdall",
+	mesh, err := latticeserf.NewMesh(latticeserf.MeshConfig{
+		NodeName: "test-lattice",
 		BindPort: 0,
 	})
 	require.NoError(t, err)
@@ -47,8 +47,8 @@ func TestObserverService_GetTopology(t *testing.T) {
 }
 
 func TestObserverService_BuildTopology(t *testing.T) {
-	mesh, err := heimdallserf.NewMesh(heimdallserf.MeshConfig{
-		NodeName: "test-heimdall",
+	mesh, err := latticeserf.NewMesh(latticeserf.MeshConfig{
+		NodeName: "test-lattice",
 		BindPort: 0,
 		Tags: map[string]string{
 			"service_name": "api",
@@ -71,7 +71,7 @@ func TestObserverService_BuildTopology(t *testing.T) {
 	require.NotNil(t, topology)
 	require.Greater(t, topology.Timestamp, int64(0))
 
-	// Should have at least the heimdall node with tags
+	// Should have at least the lattice node with tags
 	require.GreaterOrEqual(t, len(topology.Services), 1)
 }
 

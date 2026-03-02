@@ -11,10 +11,10 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
-	"github.com/norncorp/heimdall/internal/api"
-	"github.com/norncorp/heimdall/internal/config"
-	"github.com/norncorp/heimdall/internal/serf"
-	"github.com/norncorp/heimdall/pkg/api/observer/v1/observerapiconnect"
+	"github.com/jumppad-labs/lattice/internal/api"
+	"github.com/jumppad-labs/lattice/internal/config"
+	"github.com/jumppad-labs/lattice/internal/serf"
+	"github.com/jumppad-labs/lattice/pkg/api/observer/v1/observerapiconnect"
 	"github.com/spf13/cobra"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
@@ -22,8 +22,8 @@ import (
 
 var serverCmd = &cobra.Command{
 	Use:   "server",
-	Short: "Start the Heimdall server",
-	Long:  `Start the Heimdall server with gossip mesh and web UI.`,
+	Short: "Start the Lattice server",
+	Long:  `Start the Lattice server with gossip mesh and web UI.`,
 	RunE:  runServer,
 }
 
@@ -53,7 +53,7 @@ func runServer(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("invalid config: %w", err)
 	}
 
-	log.Printf("Starting Heimdall server...")
+	log.Printf("Starting Lattice server...")
 	log.Printf("  Gossip mesh: %s", cfg.Server.Listen)
 	log.Printf("  Web UI + API: %s", cfg.Server.UI)
 
@@ -135,7 +135,7 @@ func parseMeshConfig(listen string) (serf.MeshConfig, error) {
 	// For simplicity, parse host:port
 	// TODO: Could enhance this to support more complex configurations
 	return serf.MeshConfig{
-		NodeName: "heimdall",
+		NodeName: "lattice",
 		BindAddr: "0.0.0.0",
 		BindPort: 7946, // Default port, could parse from listen address
 	}, nil

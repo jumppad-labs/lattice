@@ -4,21 +4,21 @@ set -e
 echo "Building binaries..."
 cd /Users/erik/code/instruqt/norncorp
 
-# Build heimdall
-cd heimdall
-go build -o /tmp/heimdall ./cmd/heimdall
+# Build lattice
+cd lattice
+go build -o /tmp/lattice ./cmd/lattice
 cd ..
 
-# Build loki
+# Build polymorph
 cd loki
-go build -o /tmp/loki ./cmd/loki
+go build -o /tmp/polymorph ./cmd/polymorph
 cd ..
 
-echo "Starting Heimdall..."
-/tmp/heimdall server -c heimdall/examples/heimdall.hcl &
-HEIMDALL_PID=$!
+echo "Starting Lattice..."
+/tmp/lattice server -c lattice/examples/lattice.hcl &
+LATTICE_PID=$!
 
-# Give Heimdall time to start
+# Give Lattice time to start
 sleep 2
 
 echo "Testing empty topology..."
@@ -27,25 +27,25 @@ RESPONSE=$(curl -s -X POST http://localhost:9000/observer.v1.ObserverService/Get
   -d '{}')
 echo "Empty topology: $RESPONSE"
 
-echo "Starting Loki with Heimdall integration..."
-/tmp/loki server -c loki/examples/with-heimdall.hcl &
-LOKI_PID=$!
+echo "Starting Polymorph with Lattice integration..."
+/tmp/polymorph server -c loki/examples/with-lattice.hcl &
+POLYMORPH_PID=$!
 
-# Give Loki time to join the mesh
+# Give Polymorph time to join the mesh
 sleep 3
 
-echo "Testing topology with Loki..."
+echo "Testing topology with Polymorph..."
 RESPONSE=$(curl -s -X POST http://localhost:9000/observer.v1.ObserverService/GetTopology \
   -H "Content-Type: application/json" \
   -d '{}')
-echo "Topology with Loki: $RESPONSE"
+echo "Topology with Polymorph: $RESPONSE"
 
 # Check if response contains the service
 if echo "$RESPONSE" | grep -q "api"; then
-  echo "✓ Loki service 'api' found in topology"
+  echo "✓ Polymorph service 'api' found in topology"
 else
-  echo "✗ Loki service 'api' not found in topology"
-  kill $LOKI_PID $HEIMDALL_PID 2>/dev/null || true
+  echo "✗ Polymorph service 'api' not found in topology"
+  kill $POLYMORPH_PID $LATTICE_PID 2>/dev/null || true
   exit 1
 fi
 
@@ -54,13 +54,13 @@ if echo "$RESPONSE" | grep -q "http"; then
   echo "✓ Service type 'http' found in topology"
 else
   echo "✗ Service type 'http' not found in topology"
-  kill $LOKI_PID $HEIMDALL_PID 2>/dev/null || true
+  kill $POLYMORPH_PID $LATTICE_PID 2>/dev/null || true
   exit 1
 fi
 
 echo "Cleaning up..."
-kill $LOKI_PID 2>/dev/null || true
-kill $HEIMDALL_PID 2>/dev/null || true
+kill $POLYMORPH_PID 2>/dev/null || true
+kill $LATTICE_PID 2>/dev/null || true
 
 # Give processes time to clean up
 sleep 2

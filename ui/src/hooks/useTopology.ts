@@ -12,7 +12,7 @@ export interface UseTopologyResult {
 }
 
 /**
- * Hook to stream topology updates from Heimdall
+ * Hook to stream topology updates from Lattice
  * Uses WatchTopology streaming RPC for real-time updates
  */
 export function useTopology(): UseTopologyResult {

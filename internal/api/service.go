@@ -12,31 +12,32 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/hashicorp/serf/serf"
-	observerv1 "github.com/norncorp/heimdall/pkg/api/observer/v1"
-	"github.com/norncorp/heimdall/pkg/api/observer/v1/observerapiconnect"
-	heimdallserf "github.com/norncorp/heimdall/internal/serf"
+	observerv1 "github.com/jumppad-labs/lattice/pkg/api/observer/v1"
+	"github.com/jumppad-labs/lattice/pkg/api/observer/v1/observerapiconnect"
+	latticeserf "github.com/jumppad-labs/lattice/internal/serf"
+	"google.golang.org/protobuf/encoding/protojson"
 )
 
 // ObserverService implements the Observer API
 type ObserverService struct {
-	mesh      *heimdallserf.Mesh
+	mesh      *latticeserf.Mesh
 	mu        sync.RWMutex
 	watchers  map[chan *observerv1.TopologyUpdate]struct{}
 }
 
 // NewObserverService creates a new ObserverService
-func NewObserverService(mesh *heimdallserf.Mesh) *ObserverService {
+func NewObserverService(mesh *latticeserf.Mesh) *ObserverService {
 	svc := &ObserverService{
 		mesh:     mesh,
 		watchers: make(map[chan *observerv1.TopologyUpdate]struct{}),
 	}
 
 	// Register callbacks for mesh events
-	mesh.OnJoin(func(member *heimdallserf.Member) {
+	mesh.OnJoin(func(member *latticeserf.Member) {
 		svc.notifyWatchers()
 	})
 
-	mesh.OnLeave(func(member *heimdallserf.Member) {
+	mesh.OnLeave(func(member *latticeserf.Member) {
 		svc.notifyWatchers()
 	})
 
@@ -125,7 +126,7 @@ func (s *ObserverService) GetServiceResources(
 
 	// Find path to target node using topology graph
 	graph := s.mesh.Graph()
-	path := graph.FindPath("heimdall", targetService.NodeName)
+	path := graph.FindPath("lattice", targetService.NodeName)
 
 	if path == nil {
 		return nil, connect.NewError(connect.CodeUnavailable,
@@ -135,7 +136,7 @@ func (s *ObserverService) GetServiceResources(
 	// Determine entry point (first Loki node in path)
 	var entryNode string
 	if len(path) > 1 {
-		entryNode = path[1] // Skip "heimdall", get first Loki node
+		entryNode = path[1] // Skip "lattice", get first Polymorph node
 	} else {
 		return nil, connect.NewError(connect.CodeInternal,
 			fmt.Errorf("invalid path: %v", path))
@@ -159,7 +160,7 @@ func (s *ObserverService) GetServiceResources(
 	serviceURL := fmt.Sprintf("http://%s/meta.v1.LokiMetaService/GetResources", entryAddr)
 	reqBody := map[string]any{
 		"serviceName": req.Msg.ServiceName,
-		"path":        path[1:], // Remove "heimdall" from path
+		"path":        path[1:], // Remove "lattice" from path
 		"currentHop":  0,
 	}
 	reqJSON, err := json.Marshal(reqBody)
@@ -211,7 +212,7 @@ func (s *ObserverService) GetServiceResources(
 			fmt.Errorf("failed to parse Loki response: %w", err))
 	}
 
-	// Convert to Heimdall format
+	// Convert to Lattice format
 	var resources []*observerv1.Resource
 	for _, svcRes := range lokiResp.Services {
 		for _, res := range svcRes.Resources {
@@ -237,6 +238,108 @@ func (s *ObserverService) GetServiceResources(
 
 	resp := &observerv1.GetServiceResourcesResponse{
 		Resources: resources,
+	}
+
+	return connect.NewResponse(resp), nil
+}
+
+// GetRequestLogs fetches recent HTTP request logs for a service
+func (s *ObserverService) GetRequestLogs(
+	ctx context.Context,
+	req *connect.Request[observerv1.GetRequestLogsRequest],
+) (*connect.Response[observerv1.GetRequestLogsResponse], error) {
+	// Find the service in the current topology
+	topology := s.buildTopology()
+	var targetService *observerv1.Service
+	for _, svc := range topology.Services {
+		if svc.Name == req.Msg.ServiceName {
+			targetService = svc
+			break
+		}
+	}
+
+	if targetService == nil {
+		return nil, connect.NewError(connect.CodeNotFound,
+			fmt.Errorf("service %q not found", req.Msg.ServiceName))
+	}
+
+	// Find path to target node using topology graph
+	graph := s.mesh.Graph()
+	path := graph.FindPath("lattice", targetService.NodeName)
+
+	if path == nil {
+		return nil, connect.NewError(connect.CodeUnavailable,
+			fmt.Errorf("no route to node %q", targetService.NodeName))
+	}
+
+	// Determine entry point (first Loki node in path)
+	var entryNode string
+	if len(path) > 1 {
+		entryNode = path[1] // Skip "lattice", get first Polymorph node
+	} else {
+		return nil, connect.NewError(connect.CodeInternal,
+			fmt.Errorf("invalid path: %v", path))
+	}
+
+	// Find entry node's service address
+	var entryAddr string
+	for _, svc := range topology.Services {
+		if svc.NodeName == entryNode {
+			entryAddr = svc.Address
+			break
+		}
+	}
+
+	if entryAddr == "" {
+		return nil, connect.NewError(connect.CodeInternal,
+			fmt.Errorf("no service address for entry node %q", entryNode))
+	}
+
+	// Build RPC request with path
+	serviceURL := fmt.Sprintf("http://%s/meta.v1.LokiMetaService/GetRequestLogs", entryAddr)
+	reqBody := map[string]any{
+		"serviceName":   req.Msg.ServiceName,
+		"afterSequence": req.Msg.AfterSequence,
+		"limit":         req.Msg.Limit,
+		"path":          path[1:], // Remove "lattice" from path
+		"currentHop":    0,
+	}
+	reqJSON, err := json.Marshal(reqBody)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+
+	// Make HTTP POST request
+	httpReq, err := http.NewRequestWithContext(ctx, "POST", serviceURL, bytes.NewReader(reqJSON))
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+	httpReq.Header.Set("Content-Type", "application/json")
+
+	httpResp, err := http.DefaultClient.Do(httpReq)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeUnavailable,
+			fmt.Errorf("failed to connect to Loki service: %w", err))
+	}
+	defer httpResp.Body.Close()
+
+	if httpResp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(httpResp.Body)
+		return nil, connect.NewError(connect.CodeInternal,
+			fmt.Errorf("Loki returned status %d: %s", httpResp.StatusCode, string(body)))
+	}
+
+	// Parse response using protobuf JSON unmarshaler (handles uint64/enum strings)
+	body, err := io.ReadAll(httpResp.Body)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal,
+			fmt.Errorf("failed to read response body: %w", err))
+	}
+
+	resp := &observerv1.GetRequestLogsResponse{}
+	if err := protojson.Unmarshal(body, resp); err != nil {
+		return nil, connect.NewError(connect.CodeInternal,
+			fmt.Errorf("failed to parse Loki response: %w", err))
 	}
 
 	return connect.NewResponse(resp), nil
@@ -292,7 +395,7 @@ func (s *ObserverService) buildTopology() *observerv1.Topology {
 			}
 			services = append(services, service)
 		}
-		// Skip heimdall-only nodes (no services tag)
+		// Skip lattice-only nodes (no services tag)
 	}
 
 	return &observerv1.Topology{

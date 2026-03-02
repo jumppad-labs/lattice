@@ -7,7 +7,7 @@ import (
 	"sync"
 
 	"github.com/hashicorp/serf/serf"
-	"github.com/norncorp/heimdall/internal/topology"
+	"github.com/jumppad-labs/lattice/internal/topology"
 )
 
 // MeshConfig contains configuration for creating a new Mesh

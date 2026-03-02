@@ -8,9 +8,9 @@ import (
 )
 
 var rootCmd = &cobra.Command{
-	Use:   "heimdall",
-	Short: "Heimdall - Service mesh observer and gossip mesh manager",
-	Long: `Heimdall is the all-seeing observer for Loki service meshes.
+	Use:   "lattice",
+	Short: "Lattice - Service mesh observer and gossip mesh manager",
+	Long: `Lattice is the observer for Polymorph service meshes.
 It manages a gossip mesh for service discovery and provides a web UI for topology visualization.`,
 }
 

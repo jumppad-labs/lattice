@@ -1,4 +1,4 @@
-module github.com/norncorp/heimdall
+module github.com/jumppad-labs/lattice
 
 go 1.25.5
 

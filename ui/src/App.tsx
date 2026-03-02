@@ -14,7 +14,7 @@ function App() {
       <div className="sticky top-0 z-10 flex h-16 shrink-0 items-center gap-x-4 border-b border-gray-800 bg-norn-dark px-4 shadow-sm sm:gap-x-6 sm:px-6 lg:px-8">
         <div className="flex items-center gap-3">
           <div className="h-8 w-8 rounded-lg bg-norn-green" />
-          <h1 className="text-lg font-semibold text-white">Heimdall</h1>
+          <h1 className="text-lg font-semibold text-white">Lattice</h1>
           <span className="text-gray-600">|</span>
           <span className="text-sm text-gray-400">Service Mesh Topology</span>
         </div>
@@ -56,7 +56,7 @@ function App() {
                 </svg>
                 <h3 className="mt-2 text-sm font-semibold text-gray-300">Connection Error</h3>
                 <p className="mt-1 text-sm text-gray-500">
-                  Failed to connect to Heimdall: {error.message}
+                  Failed to connect to Lattice: {error.message}
                 </p>
               </div>
             </div>

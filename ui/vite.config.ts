@@ -10,7 +10,7 @@ export default defineConfig({
   server: {
     port: 3000,
     proxy: {
-      // Proxy API requests to heimdall backend
+      // Proxy API requests to lattice backend
       '/observer.v1.ObserverService': {
         target: 'http://localhost:9000',
         changeOrigin: true,

@@ -7,7 +7,7 @@ import (
 	"github.com/hashicorp/hcl/v2/hclsimple"
 )
 
-// ParseFile parses a Heimdall configuration file
+// ParseFile parses a Lattice configuration file
 func ParseFile(path string) (*Config, error) {
 	content, err := os.ReadFile(path)
 	if err != nil {
