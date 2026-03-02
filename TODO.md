@@ -3,7 +3,7 @@
 ## Proto Dependencies
 
 Currently, `Resource` and `Field` proto messages are duplicated in both:
-- `loki/api/meta/v1/meta.proto` (source of truth)
+- `polymorph/api/meta/v1/meta.proto` (source of truth)
 - `lattice/api/observer/v1/observer.proto` (copy)
 
 **Future improvement:** Configure Lattice to import from Polymorph's protos directly.
@@ -26,7 +26,7 @@ Use buf workspace for local development:
 # norncorp/buf.work.yaml
 version: v2
 directories:
-  - loki
+  - polymorph
   - lattice
 ```
 

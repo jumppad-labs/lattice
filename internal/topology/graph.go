@@ -6,7 +6,7 @@ import (
 	"sync"
 )
 
-// TopologyEvent is received from Loki nodes via Serf user events
+// TopologyEvent is received from Polymorph nodes via Serf user events
 type TopologyEvent struct {
 	Node      string   `json:"n"`  // Node name
 	Neighbors []string `json:"nb"` // Direct neighbors

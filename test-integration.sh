@@ -10,7 +10,7 @@ go build -o /tmp/lattice ./cmd/lattice
 cd ..
 
 # Build polymorph
-cd loki
+cd polymorph
 go build -o /tmp/polymorph ./cmd/polymorph
 cd ..
 
@@ -28,7 +28,7 @@ RESPONSE=$(curl -s -X POST http://localhost:9000/observer.v1.ObserverService/Get
 echo "Empty topology: $RESPONSE"
 
 echo "Starting Polymorph with Lattice integration..."
-/tmp/polymorph server -c loki/examples/with-lattice.hcl &
+/tmp/polymorph server -c polymorph/examples/with-lattice.hcl &
 POLYMORPH_PID=$!
 
 # Give Polymorph time to join the mesh

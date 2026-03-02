@@ -2,7 +2,7 @@
 
 The observer for Polymorph service meshes. Lattice provides real-time topology visualization and monitoring through a gossip-based discovery mesh and a web UI.
 
-Services running in [Polymorph](../loki/) automatically register with Lattice via Serf, and Lattice renders the live service graph -- showing services, their dependencies, resource schemas, and request logs.
+Services running in [Polymorph](../polymorph/) automatically register with Lattice via Serf, and Lattice renders the live service graph -- showing services, their dependencies, resource schemas, and request logs.
 
 ## Quick Start
 

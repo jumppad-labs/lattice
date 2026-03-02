@@ -342,7 +342,7 @@ export function TopologyGraph({ services, onServiceClick }: TopologyGraphProps) 
           </svg>
           <h3 className="mt-2 text-sm font-semibold text-gray-300">No services</h3>
           <p className="mt-1 text-sm text-gray-500">
-            Start Loki services to see them appear in the topology graph.
+            Start Polymorph services to see them appear in the topology graph.
           </p>
         </div>
       </div>

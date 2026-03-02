@@ -12,7 +12,7 @@ service ObserverService {
   // WatchTopology streams topology updates in real-time
   rpc WatchTopology(WatchTopologyRequest) returns (stream TopologyUpdate) {}
 
-  // GetServiceResources fetches resource metadata from a Loki service via RPC
+  // GetServiceResources fetches resource metadata from a Polymorph service via RPC
   rpc GetServiceResources(GetServiceResourcesRequest) returns (GetServiceResourcesResponse) {}
 
   // GetRequestLogs fetches recent HTTP request logs for a service

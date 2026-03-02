@@ -104,7 +104,7 @@ func (s *ObserverService) WatchTopology(
 	}
 }
 
-// GetServiceResources fetches resource metadata from a Loki service via RPC
+// GetServiceResources fetches resource metadata from a Polymorph service via RPC
 func (s *ObserverService) GetServiceResources(
 	ctx context.Context,
 	req *connect.Request[observerv1.GetServiceResourcesRequest],
@@ -133,7 +133,7 @@ func (s *ObserverService) GetServiceResources(
 			fmt.Errorf("no route to node %q", targetService.NodeName))
 	}
 
-	// Determine entry point (first Loki node in path)
+	// Determine entry point (first Polymorph node in path)
 	var entryNode string
 	if len(path) > 1 {
 		entryNode = path[1] // Skip "lattice", get first Polymorph node
@@ -157,7 +157,7 @@ func (s *ObserverService) GetServiceResources(
 	}
 
 	// Build RPC request with path
-	serviceURL := fmt.Sprintf("http://%s/meta.v1.LokiMetaService/GetResources", entryAddr)
+	serviceURL := fmt.Sprintf("http://%s/meta.v1.PolymorphMetaService/GetResources", entryAddr)
 	reqBody := map[string]any{
 		"serviceName": req.Msg.ServiceName,
 		"path":        path[1:], // Remove "lattice" from path
@@ -178,14 +178,14 @@ func (s *ObserverService) GetServiceResources(
 	httpResp, err := http.DefaultClient.Do(httpReq)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeUnavailable,
-			fmt.Errorf("failed to connect to Loki service: %w", err))
+			fmt.Errorf("failed to connect to Polymorph service: %w", err))
 	}
 	defer httpResp.Body.Close()
 
 	if httpResp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(httpResp.Body)
 		return nil, connect.NewError(connect.CodeInternal,
-			fmt.Errorf("Loki returned status %d: %s", httpResp.StatusCode, string(body)))
+			fmt.Errorf("Polymorph returned status %d: %s", httpResp.StatusCode, string(body)))
 	}
 
 	// Parse response
@@ -209,7 +209,7 @@ func (s *ObserverService) GetServiceResources(
 
 	if err := json.NewDecoder(httpResp.Body).Decode(&lokiResp); err != nil {
 		return nil, connect.NewError(connect.CodeInternal,
-			fmt.Errorf("failed to parse Loki response: %w", err))
+			fmt.Errorf("failed to parse Polymorph response: %w", err))
 	}
 
 	// Convert to Lattice format
@@ -272,7 +272,7 @@ func (s *ObserverService) GetRequestLogs(
 			fmt.Errorf("no route to node %q", targetService.NodeName))
 	}
 
-	// Determine entry point (first Loki node in path)
+	// Determine entry point (first Polymorph node in path)
 	var entryNode string
 	if len(path) > 1 {
 		entryNode = path[1] // Skip "lattice", get first Polymorph node
@@ -296,7 +296,7 @@ func (s *ObserverService) GetRequestLogs(
 	}
 
 	// Build RPC request with path
-	serviceURL := fmt.Sprintf("http://%s/meta.v1.LokiMetaService/GetRequestLogs", entryAddr)
+	serviceURL := fmt.Sprintf("http://%s/meta.v1.PolymorphMetaService/GetRequestLogs", entryAddr)
 	reqBody := map[string]any{
 		"serviceName":   req.Msg.ServiceName,
 		"afterSequence": req.Msg.AfterSequence,
@@ -319,14 +319,14 @@ func (s *ObserverService) GetRequestLogs(
 	httpResp, err := http.DefaultClient.Do(httpReq)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeUnavailable,
-			fmt.Errorf("failed to connect to Loki service: %w", err))
+			fmt.Errorf("failed to connect to Polymorph service: %w", err))
 	}
 	defer httpResp.Body.Close()
 
 	if httpResp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(httpResp.Body)
 		return nil, connect.NewError(connect.CodeInternal,
-			fmt.Errorf("Loki returned status %d: %s", httpResp.StatusCode, string(body)))
+			fmt.Errorf("Polymorph returned status %d: %s", httpResp.StatusCode, string(body)))
 	}
 
 	// Parse response using protobuf JSON unmarshaler (handles uint64/enum strings)
@@ -339,13 +339,13 @@ func (s *ObserverService) GetRequestLogs(
 	resp := &observerv1.GetRequestLogsResponse{}
 	if err := protojson.Unmarshal(body, resp); err != nil {
 		return nil, connect.NewError(connect.CodeInternal,
-			fmt.Errorf("failed to parse Loki response: %w", err))
+			fmt.Errorf("failed to parse Polymorph response: %w", err))
 	}
 
 	return connect.NewResponse(resp), nil
 }
 
-// ServiceInfo represents service metadata from Loki
+// ServiceInfo represents service metadata from Polymorph
 // Only includes basic discovery info - resource metadata is fetched via RPC
 type ServiceInfo struct {
 	Name      string   `json:"name"`

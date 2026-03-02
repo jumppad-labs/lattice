@@ -62,7 +62,7 @@ type ObserverServiceClient interface {
 	GetTopology(context.Context, *connect.Request[v1.GetTopologyRequest]) (*connect.Response[v1.GetTopologyResponse], error)
 	// WatchTopology streams topology updates in real-time
 	WatchTopology(context.Context, *connect.Request[v1.WatchTopologyRequest]) (*connect.ServerStreamForClient[v1.TopologyUpdate], error)
-	// GetServiceResources fetches resource metadata from a Loki service via RPC
+	// GetServiceResources fetches resource metadata from a Polymorph service via RPC
 	GetServiceResources(context.Context, *connect.Request[v1.GetServiceResourcesRequest]) (*connect.Response[v1.GetServiceResourcesResponse], error)
 	// GetRequestLogs fetches recent HTTP request logs for a service
 	GetRequestLogs(context.Context, *connect.Request[v1.GetRequestLogsRequest]) (*connect.Response[v1.GetRequestLogsResponse], error)
@@ -139,7 +139,7 @@ type ObserverServiceHandler interface {
 	GetTopology(context.Context, *connect.Request[v1.GetTopologyRequest]) (*connect.Response[v1.GetTopologyResponse], error)
 	// WatchTopology streams topology updates in real-time
 	WatchTopology(context.Context, *connect.Request[v1.WatchTopologyRequest], *connect.ServerStream[v1.TopologyUpdate]) error
-	// GetServiceResources fetches resource metadata from a Loki service via RPC
+	// GetServiceResources fetches resource metadata from a Polymorph service via RPC
 	GetServiceResources(context.Context, *connect.Request[v1.GetServiceResourcesRequest]) (*connect.Response[v1.GetServiceResourcesResponse], error)
 	// GetRequestLogs fetches recent HTTP request logs for a service
 	GetRequestLogs(context.Context, *connect.Request[v1.GetRequestLogsRequest]) (*connect.Response[v1.GetRequestLogsResponse], error)
